@@ -79,39 +79,44 @@ jobs:
         run: flutter build windows --release
 
       - name: Create Windows installer
+        shell: pwsh
         run: |
           # Install NSIS for creating installer
           choco install nsis -y
-
-          # Create installer script
-          @"
+          
+          # Create installer script using here-string
+          $nsisScript = @'
           OutFile "Enhanced-ChameleonUltraGUI-Setup.exe"
-          InstallDir "`$PROGRAMFILES64\Enhanced ChameleonUltraGUI"
+          InstallDir "$PROGRAMFILES64\Enhanced ChameleonUltraGUI"
           Section
-            SetOutPath `$INSTDIR
+            SetOutPath $INSTDIR
             File /r "build\windows\x64\runner\Release\*"
-            CreateShortcut "`$DESKTOP\Enhanced ChameleonUltraGUI.lnk" "`$INSTDIR\enhanced_chameleon_ultra_gui.exe"
-            CreateDirectory "`$SMPROGRAMS\Enhanced ChameleonUltraGUI"
-            CreateShortcut "`$SMPROGRAMS\Enhanced ChameleonUltraGUI\Enhanced ChameleonUltraGUI.lnk" "`$INSTDIR\enhanced_chameleon_ultra_gui.exe"
-            CreateShortcut "`$SMPROGRAMS\Enhanced ChameleonUltraGUI\Uninstall.lnk" "`$INSTDIR\uninstall.exe"
-            WriteUninstaller "`$INSTDIR\uninstall.exe"
+            CreateShortcut "$DESKTOP\Enhanced ChameleonUltraGUI.lnk" "$INSTDIR\enhanced_chameleon_ultra_gui.exe"
+            CreateDirectory "$SMPROGRAMS\Enhanced ChameleonUltraGUI"
+            CreateShortcut "$SMPROGRAMS\Enhanced ChameleonUltraGUI\Enhanced ChameleonUltraGUI.lnk" "$INSTDIR\enhanced_chameleon_ultra_gui.exe"
+            CreateShortcut "$SMPROGRAMS\Enhanced ChameleonUltraGUI\Uninstall.lnk" "$INSTDIR\uninstall.exe"
+            WriteUninstaller "$INSTDIR\uninstall.exe"
           SectionEnd
           Section "Uninstall"
-            Delete "`$DESKTOP\Enhanced ChameleonUltraGUI.lnk"
-            Delete "`$SMPROGRAMS\Enhanced ChameleonUltraGUI\*.*"
-            RMDir "`$SMPROGRAMS\Enhanced ChameleonUltraGUI"
-            RMDir /r "`$INSTDIR"
+            Delete "$DESKTOP\Enhanced ChameleonUltraGUI.lnk"
+            Delete "$SMPROGRAMS\Enhanced ChameleonUltraGUI\*.*"
+            RMDir "$SMPROGRAMS\Enhanced ChameleonUltraGUI"
+            RMDir /r "$INSTDIR"
           SectionEnd
-          "@ | Out-File -FilePath installer.nsi -Encoding UTF8
-
+          '@
+          
+          # Write the script to file
+          $nsisScript | Out-File -FilePath "installer.nsi" -Encoding UTF8
+          
           # Build installer
           makensis installer.nsi
 
       - name: Create portable Windows package
+        shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path windows-portable
-          Copy-Item -Path "build\windows\x64\runner\Release\*" -Destination windows-portable -Recurse
-          Compress-Archive -Path windows-portable -DestinationPath Enhanced-ChameleonUltraGUI-Windows-Portable.zip
+          New-Item -ItemType Directory -Force -Path "windows-portable"
+          Copy-Item -Path "build\windows\x64\runner\Release\*" -Destination "windows-portable" -Recurse
+          Compress-Archive -Path "windows-portable" -DestinationPath "Enhanced-ChameleonUltraGUI-Windows-Portable.zip"
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
