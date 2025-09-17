@@ -1,10 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- USB device filter for Chameleon Ultra -->
-    <usb-device vendor-id="6790" product-id="29987" />
+    <!-- Chameleon Ultra device USB filters -->
+    <usb-device vendor-id="1155" product-id="22336" />
     
-    <!-- Generic USB-to-serial adapters commonly used -->
-    <usb-device vendor-id="1027" product-id="24577" /> <!-- FTDI -->
-    <usb-device vendor-id="1659" product-id="8963" />  <!-- Prolific -->
-    <usb-device vendor-id="4292" product-id="60000" /> <!-- CH340 -->
+    <!-- Generic USB-to-Serial adapters commonly used with RFID devices -->
+    <usb-device vendor-id="1027" product-id="24577" />
+    <usb-device vendor-id="1027" product-id="24596" />
+    
+    <!-- FTDI USB-to-Serial -->
+    <usb-device vendor-id="1027" product-id="24593" />
+    <usb-device vendor-id="1027" product-id="24594" />
+    
+    <!-- CP210x USB-to-Serial -->
+    <usb-device vendor-id="4292" product-id="60000" />
+    <usb-device vendor-id="4292" product-id="60016" />
+    
+    <!-- CH340/CH341 USB-to-Serial -->
+    <usb-device vendor-id="6790" product-id="29987" />
+    <usb-device vendor-id="6790" product-id="21795" />
 </resources>
