@@ -17,10 +17,6 @@ dependencies:
   shared_preferences: ^2.2.2
   http: ^1.1.2
   path: ^1.8.3
-  async: ^2.11.0
-  convert: ^3.1.1
-  collection: ^1.18.0
-  crypto: ^3.0.3
   
   # File operations
   file_picker: ^8.0.0+1
