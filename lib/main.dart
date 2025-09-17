@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-import 'bridge/chameleon_connector.dart';
-import 'bridge/chameleon_communicator.dart';
 import 'chameleon_connector.dart';
-import 'ui/terminal_page.dart';
+import 'chameleon_communicator.dart';
 
 void main() {
   runApp(const ChameleonUltraApp());
@@ -165,7 +163,7 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 32),
-                if (connector.isConnected) ..[
+                if (connector.isConnected) ...[
                   const Text('🚀 Enhanced Features:'),
                   const SizedBox(height: 16),
                   Wrap(
@@ -193,6 +191,30 @@ class HomePage extends StatelessWidget {
     return Chip(
       avatar: Icon(icon, size: 16),
       label: Text(label, style: const TextStyle(fontSize: 12)),
+    );
+  }
+}
+
+class TerminalPage extends StatelessWidget {
+  const TerminalPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Proxmark3 Terminal'),
+      ),
+      body: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.terminal, size: 64),
+            SizedBox(height: 16),
+            Text('Proxmark3 Terminal Interface'),
+            Text('Terminal functionality will be implemented here'),
+          ],
+        ),
+      ),
     );
   }
 }
