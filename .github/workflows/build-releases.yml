@@ -84,40 +84,42 @@ jobs:
           choco install nsis -y
 
           # Create installer script
-          echo 'OutFile "ChameleonUltraGUI-Setup.exe"' > installer.nsi
-          echo 'InstallDir "$PROGRAMFILES64\ChameleonUltraGUI"' >> installer.nsi
-          echo 'Section' >> installer.nsi
-          echo '  SetOutPath $INSTDIR' >> installer.nsi
-          echo '  File /r "build\windows\x64\runner\Release\*"' >> installer.nsi
-          echo '  CreateShortcut "$DESKTOP\ChameleonUltraGUI.lnk" "$INSTDIR\chameleonultragui.exe"' >> installer.nsi
-          echo '  CreateDirectory "$SMPROGRAMS\ChameleonUltraGUI"' >> installer.nsi
-          echo '  CreateShortcut "$SMPROGRAMS\ChameleonUltraGUI\ChameleonUltraGUI.lnk" "$INSTDIR\chameleonultragui.exe"' >> installer.nsi
-          echo '  CreateShortcut "$SMPROGRAMS\ChameleonUltraGUI\Uninstall.lnk" "$INSTDIR\uninstall.exe"' >> installer.nsi
-          echo '  WriteUninstaller "$INSTDIR\uninstall.exe"' >> installer.nsi
-          echo 'SectionEnd' >> installer.nsi
-          echo 'Section "Uninstall"' >> installer.nsi
-          echo '  Delete "$DESKTOP\ChameleonUltraGUI.lnk"' >> installer.nsi
-          echo '  Delete "$SMPROGRAMS\ChameleonUltraGUI\*.*"' >> installer.nsi
-          echo '  RMDir "$SMPROGRAMS\ChameleonUltraGUI"' >> installer.nsi
-          echo '  RMDir /r "$INSTDIR"' >> installer.nsi
-          echo 'SectionEnd' >> installer.nsi
+          @"
+          OutFile "Enhanced-ChameleonUltraGUI-Setup.exe"
+          InstallDir "`$PROGRAMFILES64\Enhanced ChameleonUltraGUI"
+          Section
+            SetOutPath `$INSTDIR
+            File /r "build\windows\x64\runner\Release\*"
+            CreateShortcut "`$DESKTOP\Enhanced ChameleonUltraGUI.lnk" "`$INSTDIR\enhanced_chameleon_ultra_gui.exe"
+            CreateDirectory "`$SMPROGRAMS\Enhanced ChameleonUltraGUI"
+            CreateShortcut "`$SMPROGRAMS\Enhanced ChameleonUltraGUI\Enhanced ChameleonUltraGUI.lnk" "`$INSTDIR\enhanced_chameleon_ultra_gui.exe"
+            CreateShortcut "`$SMPROGRAMS\Enhanced ChameleonUltraGUI\Uninstall.lnk" "`$INSTDIR\uninstall.exe"
+            WriteUninstaller "`$INSTDIR\uninstall.exe"
+          SectionEnd
+          Section "Uninstall"
+            Delete "`$DESKTOP\Enhanced ChameleonUltraGUI.lnk"
+            Delete "`$SMPROGRAMS\Enhanced ChameleonUltraGUI\*.*"
+            RMDir "`$SMPROGRAMS\Enhanced ChameleonUltraGUI"
+            RMDir /r "`$INSTDIR"
+          SectionEnd
+          "@ | Out-File -FilePath installer.nsi -Encoding UTF8
 
           # Build installer
           makensis installer.nsi
 
       - name: Create portable Windows package
         run: |
-          mkdir -p windows-portable
-          cp -r build/windows/x64/runner/Release/* windows-portable/
-          Compress-Archive -Path windows-portable -DestinationPath ChameleonUltraGUI-Windows-Portable.zip
+          New-Item -ItemType Directory -Force -Path windows-portable
+          Copy-Item -Path "build\windows\x64\runner\Release\*" -Destination windows-portable -Recurse
+          Compress-Archive -Path windows-portable -DestinationPath Enhanced-ChameleonUltraGUI-Windows-Portable.zip
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-builds
           path: |
-            ChameleonUltraGUI-Setup.exe
-            ChameleonUltraGUI-Windows-Portable.zip
+            Enhanced-ChameleonUltraGUI-Setup.exe
+            Enhanced-ChameleonUltraGUI-Windows-Portable.zip
 
   # Build Linux
   build-linux:
@@ -151,13 +153,13 @@ jobs:
         run: |
           mkdir -p linux-build
           cp -r build/linux/x64/release/bundle/* linux-build/
-          tar -czf ChameleonUltraGUI-Linux.tar.gz linux-build/
+          tar -czf Enhanced-ChameleonUltraGUI-Linux.tar.gz linux-build/
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-builds
-          path: ChameleonUltraGUI-Linux.tar.gz
+          path: Enhanced-ChameleonUltraGUI-Linux.tar.gz
 
   # Build macOS
   build-macos:
@@ -185,14 +187,14 @@ jobs:
       - name: Create macOS DMG
         run: |
           mkdir -p dmg-contents
-          cp -r build/macos/Build/Products/Release/chameleonultragui.app dmg-contents/
-          hdiutil create -srcfolder dmg-contents -volname "ChameleonUltraGUI" -format UDZO ChameleonUltraGUI-macOS.dmg
+          cp -r build/macos/Build/Products/Release/enhanced_chameleon_ultra_gui.app dmg-contents/
+          hdiutil create -srcfolder dmg-contents -volname "Enhanced ChameleonUltraGUI" -format UDZO Enhanced-ChameleonUltraGUI-macOS.dmg
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos-builds
-          path: ChameleonUltraGUI-macOS.dmg
+          path: Enhanced-ChameleonUltraGUI-macOS.dmg
 
   # Create GitHub Release
   create-release:
