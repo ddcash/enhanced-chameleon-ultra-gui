@@ -1,0 +1,38 @@
+name: Debug Flutter Setup
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: "3.24.3"
+
+jobs:
+  debug-flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      - name: Check pubspec.yaml
+        run: cat pubspec.yaml
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Check dart files syntax
+        run: flutter analyze --no-fatal-infos
+
+      - name: List lib directory
+        run: find lib -name "*.dart" | head -10
