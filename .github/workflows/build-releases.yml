@@ -1,0 +1,296 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: "3.24.3"
+
+jobs:
+  # Build Android APK
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Analyze project
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build APK
+        run: flutter build apk --release --split-per-abi
+
+      - name: Build App Bundle
+        run: flutter build appbundle --release
+
+      - name: Create APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-builds
+          path: |
+            build/app/outputs/flutter-apk/*.apk
+            build/app/outputs/bundle/release/*.aab
+
+  # Build Windows
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Create Windows installer
+        run: |
+          # Install NSIS for creating installer
+          choco install nsis -y
+
+          # Create installer script
+          echo 'OutFile "ChameleonUltraGUI-Setup.exe"' > installer.nsi
+          echo 'InstallDir "$PROGRAMFILES64\ChameleonUltraGUI"' >> installer.nsi
+          echo 'Section' >> installer.nsi
+          echo '  SetOutPath $INSTDIR' >> installer.nsi
+          echo '  File /r "build\windows\x64\runner\Release\*"' >> installer.nsi
+          echo '  CreateShortcut "$DESKTOP\ChameleonUltraGUI.lnk" "$INSTDIR\chameleonultragui.exe"' >> installer.nsi
+          echo '  CreateDirectory "$SMPROGRAMS\ChameleonUltraGUI"' >> installer.nsi
+          echo '  CreateShortcut "$SMPROGRAMS\ChameleonUltraGUI\ChameleonUltraGUI.lnk" "$INSTDIR\chameleonultragui.exe"' >> installer.nsi
+          echo '  CreateShortcut "$SMPROGRAMS\ChameleonUltraGUI\Uninstall.lnk" "$INSTDIR\uninstall.exe"' >> installer.nsi
+          echo '  WriteUninstaller "$INSTDIR\uninstall.exe"' >> installer.nsi
+          echo 'SectionEnd' >> installer.nsi
+          echo 'Section "Uninstall"' >> installer.nsi
+          echo '  Delete "$DESKTOP\ChameleonUltraGUI.lnk"' >> installer.nsi
+          echo '  Delete "$SMPROGRAMS\ChameleonUltraGUI\*.*"' >> installer.nsi
+          echo '  RMDir "$SMPROGRAMS\ChameleonUltraGUI"' >> installer.nsi
+          echo '  RMDir /r "$INSTDIR"' >> installer.nsi
+          echo 'SectionEnd' >> installer.nsi
+
+          # Build installer
+          makensis installer.nsi
+
+      - name: Create portable Windows package
+        run: |
+          mkdir -p windows-portable
+          cp -r build/windows/x64/runner/Release/* windows-portable/
+          Compress-Archive -Path windows-portable -DestinationPath ChameleonUltraGUI-Windows-Portable.zip
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-builds
+          path: |
+            ChameleonUltraGUI-Setup.exe
+            ChameleonUltraGUI-Windows-Portable.zip
+
+  # Build Linux
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Enable Linux desktop
+        run: flutter config --enable-linux-desktop
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build Linux
+        run: flutter build linux --release
+
+      - name: Create Linux package
+        run: |
+          mkdir -p linux-build
+          cp -r build/linux/x64/release/bundle/* linux-build/
+          tar -czf ChameleonUltraGUI-Linux.tar.gz linux-build/
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-builds
+          path: ChameleonUltraGUI-Linux.tar.gz
+
+  # Build macOS
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Enable macOS desktop
+        run: flutter config --enable-macos-desktop
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build macOS
+        run: flutter build macos --release
+
+      - name: Create macOS DMG
+        run: |
+          mkdir -p dmg-contents
+          cp -r build/macos/Build/Products/Release/chameleonultragui.app dmg-contents/
+          hdiutil create -srcfolder dmg-contents -volname "ChameleonUltraGUI" -format UDZO ChameleonUltraGUI-macOS.dmg
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-builds
+          path: ChameleonUltraGUI-macOS.dmg
+
+  # Create GitHub Release
+  create-release:
+    needs: [build-android, build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Enhanced ChameleonUltraGUI ${{ github.ref_name }}
+          body: |
+            ## Enhanced ChameleonUltraGUI ${{ github.ref_name }}
+
+            🚀 **Features:**
+            - Full Proxmark3 Iceman firmware compatibility
+            - Advanced terminal interface with command history and auto-completion
+            - Comprehensive RFID/NFC operations (LF/HF)
+            - Cross-platform support (Android, Windows, Linux, macOS)
+
+            📦 **Downloads:**
+            - **Android**: APK files for arm64, armeabi-v7a, and x86_64
+            - **Windows**: Installer (Setup.exe) and Portable version
+            - **Linux**: Portable tar.gz package
+            - **macOS**: DMG installer
+
+            📖 **Documentation:** See README.md for complete usage guide
+
+            🔧 **Installation:**
+            - Android: Install APK directly or via ADB
+            - Windows: Run Setup.exe for installer or extract portable version
+            - Linux: Extract tar.gz and run binary
+            - macOS: Mount DMG and copy to Applications
+
+            ⚠️ **Note:** This is an enhanced version with Proxmark3 compatibility built on the original ChameleonUltraGUI foundation.
+          files: |
+            android-builds/*
+            windows-builds/*
+            linux-builds/*
+            macos-builds/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Development builds (on push to main/master)
+  dev-release:
+    needs: [build-android, build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Delete existing dev release
+        continue-on-error: true
+        run: |
+          gh release delete dev --yes || true
+          git push origin :refs/tags/dev || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Development Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: dev
+          name: "Development Build (Latest)"
+          body: |
+            ## 🚧 Development Build - Latest Commit
+
+            **Commit:** ${{ github.sha }}
+            **Branch:** ${{ github.ref_name }}
+            **Build Date:** $(date -u)
+
+            ⚠️ **This is a development build** - Use for testing only!
+
+            📦 **Available Downloads:**
+            - Android APK (arm64-v8a, armeabi-v7a, x86_64)
+            - Windows Setup Installer & Portable
+            - Linux Portable Package
+            - macOS DMG
+
+            🔄 **Auto-updated** on every commit to main branch.
+          files: |
+            android-builds/*
+            windows-builds/*
+            linux-builds/*
+            macos-builds/*
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
