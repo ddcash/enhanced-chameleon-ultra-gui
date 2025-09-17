@@ -97,7 +97,7 @@ class CommandRegistry {
 
   /// Parse command line input
   ParsedCommand? parseCommand(String input) {
-    final parts = input.trim().split(RegExp(r'\\s+'));
+    final parts = input.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty || parts.first.isEmpty) {
       return null;
     }
@@ -136,7 +136,7 @@ class CommandRegistry {
         final commands = getCommandsInCategory(cat);
         buffer.writeln('  $cat - ${commands.length} commands');
       }
-      buffer.writeln('\\nUse "help <category>" for category-specific help');
+      buffer.writeln('\nUse "help <category>" for category-specific help');
       buffer.writeln('Use "<command> help" for command-specific help');
       return buffer.toString();
     }
