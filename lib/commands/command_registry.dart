@@ -28,34 +28,22 @@ class CommandRegistry {
     // Low Frequency commands
     _register(LfSearchCommand());
     _register(LfHidReadCommand());
-    _register(LfHidCloneCommand());
-    _register(LfEm410xReadCommand());
     _register(LfEm410xCloneCommand());
     _register(LfT55xxReadCommand());
-    _register(LfT55xxWriteCommand());
 
     // High Frequency commands
     _register(HfSearchCommand());
     _register(Hf14aInfoCommand());
-    _register(Hf14aReadCommand());
-    _register(Hf14aSimCommand());
-    _register(HfMfRdblCommand());
-    _register(HfMfWrblCommand());
     _register(HfMfDumpCommand());
-    _register(HfMfRestoreCommand());
 
     // Data commands
     _register(DataClearCommand());
     _register(DataPlotCommand());
     _register(DataSaveCommand());
-    _register(DataLoadCommand());
-    _register(DataHexCommand());
 
     // Chameleon Ultra specific commands
     _register(ChameleonSlotCommand());
-    _register(ChameleonLedCommand());
     _register(ChameleonBatteryCommand());
-    _register(ChameleonConfigCommand());
   }
 
   void _register(CommandBase command) {
