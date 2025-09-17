@@ -18,11 +18,11 @@ void main() {
     expect(find.text('Enhanced Chameleon Ultra GUI'), findsOneWidget);
 
     // Verify that we have the main navigation elements.
-    expect(find.byIcon(Icons.home), findsOneWidget);
-    expect(find.byIcon(Icons.terminal), findsOneWidget);
-    expect(find.byIcon(Icons.credit_card), findsOneWidget);
-    expect(find.byIcon(Icons.build), findsOneWidget);
-    expect(find.byIcon(Icons.settings), findsOneWidget);
+    expect(find.byIcon(Icons.home_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.terminal_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.credit_card_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.build_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
   });
 
   testWidgets('Basic navigation test', (WidgetTester tester) async {
@@ -30,17 +30,17 @@ void main() {
     await tester.pumpWidget(const ChameleonUltraApp());
 
     // Test navigation to terminal page.
-    await tester.tap(find.byIcon(Icons.terminal));
+    await tester.tap(find.byIcon(Icons.terminal_outlined));
     await tester.pumpAndSettle();
 
     // Verify we're on the terminal page.
-    expect(find.text('Terminal'), findsOneWidget);
+    expect(find.text('Proxmark3 Terminal'), findsOneWidget);
 
     // Test navigation to cards page.
-    await tester.tap(find.byIcon(Icons.credit_card));
+    await tester.tap(find.byIcon(Icons.credit_card_outlined));
     await tester.pumpAndSettle();
 
     // Verify we're on the cards page.
-    expect(find.text('Card Slots'), findsOneWidget);
+    expect(find.text('Card Manager'), findsOneWidget);
   });
 }
