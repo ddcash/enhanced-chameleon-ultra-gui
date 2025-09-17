@@ -38,4 +38,257 @@ class ChameleonCommunicator {
       final Map<String, dynamic> params = {
         'port': port ?? 'auto',
         'baudRate': baudRate ?? _baudRate,
-      };\n      \n      final bool success = await _channel.invokeMethod('connect', params);\n      \n      if (success) {\n        _isConnected = true;\n        _connectedPort = port;\n        _baudRate = baudRate ?? _baudRate;\n        _connectionStreamController.add(true);\n        \n        // Start listening for data\n        _startDataListener();\n      }\n      \n      return success;\n    } on PlatformException catch (e) {\n      print('Failed to connect: ${e.message}');\n      return false;\n    }\n  }\n  \n  /// Disconnect from device\n  Future<void> disconnect() async {\n    try {\n      await _channel.invokeMethod('disconnect');\n      _isConnected = false;\n      _connectedPort = null;\n      _connectionStreamController.add(false);\n    } on PlatformException catch (e) {\n      print('Failed to disconnect: ${e.message}');\n    }\n  }\n  \n  /// Send command to device\n  Future<String> sendCommand(String command) async {\n    if (!_isConnected) {\n      throw Exception('Device not connected');\n    }\n    \n    try {\n      final String response = await _channel.invokeMethod('sendCommand', {\n        'command': command,\n        'timeout': 5000, // 5 second timeout\n      });\n      \n      return response;\n    } on PlatformException catch (e) {\n      throw Exception('Command failed: ${e.message}');\n    }\n  }\n  \n  /// Send raw data to device\n  Future<void> sendRawData(Uint8List data) async {\n    if (!_isConnected) {\n      throw Exception('Device not connected');\n    }\n    \n    try {\n      await _channel.invokeMethod('sendRawData', {\n        'data': data,\n      });\n    } on PlatformException catch (e) {\n      throw Exception('Failed to send raw data: ${e.message}');\n    }\n  }\n  \n  /// Get available serial ports\n  Future<List<String>> getAvailablePorts() async {\n    try {\n      final List<dynamic> ports = await _channel.invokeMethod('getAvailablePorts');\n      return ports.cast<String>();\n    } on PlatformException catch (e) {\n      print('Failed to get available ports: ${e.message}');\n      return [];\n    }\n  }\n  \n  /// Auto-detect Chameleon Ultra device\n  Future<String?> autoDetectDevice() async {\n    try {\n      final String? port = await _channel.invokeMethod('autoDetectDevice');\n      return port;\n    } on PlatformException catch (e) {\n      print('Auto-detection failed: ${e.message}');\n      return null;\n    }\n  }\n  \n  /// Check device status\n  Future<Map<String, dynamic>> getDeviceStatus() async {\n    if (!_isConnected) {\n      throw Exception('Device not connected');\n    }\n    \n    try {\n      final Map<dynamic, dynamic> status = await _channel.invokeMethod('getDeviceStatus');\n      return Map<String, dynamic>.from(status);\n    } on PlatformException catch (e) {\n      throw Exception('Failed to get device status: ${e.message}');\n    }\n  }\n  \n  /// Start data listener for incoming device data\n  void _startDataListener() {\n    _channel.setMethodCallHandler((call) async {\n      switch (call.method) {\n        case 'onDataReceived':\n          final String data = call.arguments['data'];\n          _dataStreamController.add(data);\n          break;\n        case 'onConnectionLost':\n          _isConnected = false;\n          _connectedPort = null;\n          _connectionStreamController.add(false);\n          break;\n        case 'onError':\n          final String error = call.arguments['error'];\n          print('Communication error: $error');\n          break;\n      }\n    });\n  }\n  \n  /// Dispose resources\n  void dispose() {\n    _dataStreamController.close();\n    _connectionStreamController.close();\n  }\n}\n\n/// Mock implementation for development/testing\nclass MockChameleonCommunicator extends ChameleonCommunicator {\n  bool _mockConnected = false;\n  \n  @override\n  bool get isConnected => _mockConnected;\n  \n  @override\n  Future<bool> connect({String? port, int? baudRate}) async {\n    // Simulate connection delay\n    await Future.delayed(Duration(milliseconds: 1500));\n    \n    _mockConnected = true;\n    _connectedPort = port ?? '/dev/ttyUSB0';\n    _baudRate = baudRate ?? 115200;\n    \n    // Simulate connection success\n    _connectionStreamController.add(true);\n    \n    return true;\n  }\n  \n  @override\n  Future<void> disconnect() async {\n    await Future.delayed(Duration(milliseconds: 500));\n    \n    _mockConnected = false;\n    _connectedPort = null;\n    \n    _connectionStreamController.add(false);\n  }\n  \n  @override\n  Future<String> sendCommand(String command) async {\n    if (!_mockConnected) {\n      throw Exception('Device not connected');\n    }\n    \n    // Simulate command processing delay\n    await Future.delayed(Duration(milliseconds: 200 + (command.length * 10)));\n    \n    // Mock responses based on command\n    if (command.startsWith('hw version')) {\n      return '''#db# Chameleon Ultra detected\n#db# Firmware version: 2.0.0\n#db# Hardware version: Ultra\n#db# Device serial: CU-123456789ABC\n\nChameleon Ultra firmware 2.0.0''';\n    } else if (command.startsWith('hf search')) {\n      return '''#db# Searching for high frequency tags...\n\nUID : 04 68 95 71 fa 5c 64\nATQA : 00 44\nSAK : 20\nType: NXP MIFARE DESFire EV1 4k\n\n14a card found!''';\n    } else if (command.startsWith('lf search')) {\n      return '''#db# Searching for low frequency tags...\n\nEM410x pattern found:\nEM Tag ID      : 1234567890\nUnique Tag ID  : 1234567890\n\nValid EM410x ID Found!''';\n    } else if (command.startsWith('chameleon info')) {\n      return '''Chameleon Ultra Device Information:\n\nHardware Version: 2.0\nFirmware Version: 2.0.0\nDevice Serial: CU-123456789ABC\nBattery Level: 85%\nCharging: No\nUSB Connected: Yes''';\n    } else {\n      return '#db# Command executed successfully\\n\\nOK';\n    }\n  }\n  \n  @override\n  Future<List<String>> getAvailablePorts() async {\n    await Future.delayed(Duration(milliseconds: 100));\n    \n    return [\n      '/dev/ttyUSB0',\n      '/dev/ttyUSB1',\n      'COM1',\n      'COM2',\n      'COM3',\n    ];\n  }\n  \n  @override\n  Future<String?> autoDetectDevice() async {\n    await Future.delayed(Duration(milliseconds: 2000));\n    \n    // Simulate successful auto-detection\n    return '/dev/ttyUSB0';\n  }\n  \n  @override\n  Future<Map<String, dynamic>> getDeviceStatus() async {\n    if (!_mockConnected) {\n      throw Exception('Device not connected');\n    }\n    \n    await Future.delayed(Duration(milliseconds: 100));\n    \n    return {\n      'firmware_version': '2.0.0',\n      'hardware_version': '2.0',\n      'device_serial': 'CU-123456789ABC',\n      'battery_level': 85,\n      'charging': false,\n      'usb_connected': true,\n      'ble_available': true,\n      'ble_connected': false,\n      'active_slot': 1,\n      'slots_used': 3,\n      'total_slots': 8,\n    };\n  }\n}
+      };
+      
+      final bool success = await _channel.invokeMethod('connect', params);
+      
+      if (success) {
+        _isConnected = true;
+        _connectedPort = port;
+        _baudRate = baudRate ?? _baudRate;
+        _connectionStreamController.add(true);
+        
+        // Start listening for data
+        _startDataListener();
+      }
+      
+      return success;
+    } on PlatformException catch (e) {
+      print('Failed to connect: ${e.message}');
+      return false;
+    }
+  }
+  
+  /// Disconnect from device
+  Future<void> disconnect() async {
+    try {
+      await _channel.invokeMethod('disconnect');
+      _isConnected = false;
+      _connectedPort = null;
+      _connectionStreamController.add(false);
+    } on PlatformException catch (e) {
+      print('Failed to disconnect: ${e.message}');
+    }
+  }
+  
+  /// Send command to device
+  Future<String> sendCommand(String command) async {
+    if (!_isConnected) {
+      throw Exception('Device not connected');
+    }
+    
+    try {
+      final String response = await _channel.invokeMethod('sendCommand', {
+        'command': command,
+        'timeout': 5000, // 5 second timeout
+      });
+      
+      return response;
+    } on PlatformException catch (e) {
+      throw Exception('Command failed: ${e.message}');
+    }
+  }
+  
+  /// Send raw data to device
+  Future<void> sendRawData(Uint8List data) async {
+    if (!_isConnected) {
+      throw Exception('Device not connected');
+    }
+    
+    try {
+      await _channel.invokeMethod('sendRawData', {
+        'data': data,
+      });
+    } on PlatformException catch (e) {
+      throw Exception('Failed to send raw data: ${e.message}');
+    }
+  }
+  
+  /// Get available serial ports
+  Future<List<String>> getAvailablePorts() async {
+    try {
+      final List<dynamic> ports = await _channel.invokeMethod('getAvailablePorts');
+      return ports.cast<String>();
+    } on PlatformException catch (e) {
+      print('Failed to get available ports: ${e.message}');
+      return [];
+    }
+  }
+  
+  /// Auto-detect Chameleon Ultra device
+  Future<String?> autoDetectDevice() async {
+    try {
+      final String? port = await _channel.invokeMethod('autoDetectDevice');
+      return port;
+    } on PlatformException catch (e) {
+      print('Auto-detection failed: ${e.message}');
+      return null;
+    }
+  }
+  
+  /// Check device status
+  Future<Map<String, dynamic>> getDeviceStatus() async {
+    if (!_isConnected) {
+      throw Exception('Device not connected');
+    }
+    
+    try {
+      final Map<dynamic, dynamic> status = await _channel.invokeMethod('getDeviceStatus');
+      return Map<String, dynamic>.from(status);
+    } on PlatformException catch (e) {
+      throw Exception('Failed to get device status: ${e.message}');
+    }
+  }
+  
+  /// Start data listener for incoming device data
+  void _startDataListener() {
+    _channel.setMethodCallHandler((call) async {
+      switch (call.method) {
+        case 'onDataReceived':
+          final String data = call.arguments['data'];
+          _dataStreamController.add(data);
+          break;
+        case 'onConnectionLost':
+          _isConnected = false;
+          _connectedPort = null;
+          _connectionStreamController.add(false);
+          break;
+        case 'onError':
+          final String error = call.arguments['error'];
+          print('Communication error: $error');
+          break;
+      }
+    });
+  }
+  
+  /// Dispose resources
+  void dispose() {
+    _dataStreamController.close();
+    _connectionStreamController.close();
+  }
+}
+
+/// Mock implementation for development/testing
+class MockChameleonCommunicator extends ChameleonCommunicator {
+  bool _mockConnected = false;
+  
+  @override
+  bool get isConnected => _mockConnected;
+  
+  @override
+  Future<bool> connect({String? port, int? baudRate}) async {
+    // Simulate connection delay
+    await Future.delayed(const Duration(milliseconds: 1500));
+    
+    _mockConnected = true;
+    _connectedPort = port ?? '/dev/ttyUSB0';
+    _baudRate = baudRate ?? 115200;
+    
+    // Simulate connection success
+    _connectionStreamController.add(true);
+    
+    return true;
+  }
+  
+  @override
+  Future<void> disconnect() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    _mockConnected = false;
+    _connectedPort = null;
+    
+    _connectionStreamController.add(false);
+  }
+  
+  @override
+  Future<String> sendCommand(String command) async {
+    if (!_mockConnected) {
+      throw Exception('Device not connected');
+    }
+    
+    // Simulate command processing delay
+    await Future.delayed(Duration(milliseconds: 200 + (command.length * 10)));
+    
+    // Mock responses based on command
+    if (command.startsWith('hw version')) {
+      return '''#db# Chameleon Ultra detected
+#db# Firmware version: 2.0.0
+#db# Hardware version: Ultra
+#db# Device serial: CU-123456789ABC
+
+Chameleon Ultra firmware 2.0.0''';
+    } else if (command.startsWith('hf search')) {
+      return '''#db# Searching for high frequency tags...
+
+UID : 04 68 95 71 fa 5c 64
+ATQA : 00 44
+SAK : 20
+Type: NXP MIFARE DESFire EV1 4k
+
+14a card found!''';
+    } else if (command.startsWith('lf search')) {
+      return '''#db# Searching for low frequency tags...
+
+EM410x pattern found:
+EM Tag ID      : 1234567890
+Unique Tag ID  : 1234567890
+
+Valid EM410x ID Found!''';
+    } else if (command.startsWith('chameleon info')) {
+      return '''Chameleon Ultra Device Information:
+
+Hardware Version: 2.0
+Firmware Version: 2.0.0
+Device Serial: CU-123456789ABC
+Battery Level: 85%
+Charging: No
+USB Connected: Yes''';
+    } else {
+      return '#db# Command executed successfully\n\nOK';
+    }
+  }
+  
+  @override
+  Future<List<String>> getAvailablePorts() async {
+    await Future.delayed(const Duration(milliseconds: 100));
+    
+    return [
+      '/dev/ttyUSB0',
+      '/dev/ttyUSB1',
+      'COM1',
+      'COM2',
+      'COM3',
+    ];
+  }
+  
+  @override
+  Future<String?> autoDetectDevice() async {
+    await Future.delayed(const Duration(milliseconds: 2000));
+    
+    // Simulate successful auto-detection
+    return '/dev/ttyUSB0';
+  }
+  
+  @override
+  Future<Map<String, dynamic>> getDeviceStatus() async {
+    if (!_mockConnected) {
+      throw Exception('Device not connected');
+    }
+    
+    await Future.delayed(const Duration(milliseconds: 100));
+    
+    return {
+      'firmware_version': '2.0.0',
+      'hardware_version': '2.0',
+      'device_serial': 'CU-123456789ABC',
+      'battery_level': 85,
+      'charging': false,
+      'usb_connected': true,
+      'ble_available': true,
+      'ble_connected': false,
+      'active_slot': 1,
+      'slots_used': 3,
+      'total_slots': 8,
+    };
+  }
+}
