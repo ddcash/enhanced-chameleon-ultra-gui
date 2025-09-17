@@ -11,6 +11,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  
+  # Core dependencies needed by the app
+  provider: ^6.1.2
+  
+  # Terminal and code highlighting
+  xterm: ^3.5.0
+  flutter_highlight: ^0.7.0
 
 dev_dependencies:
   flutter_test:
